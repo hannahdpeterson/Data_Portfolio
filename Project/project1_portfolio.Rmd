@@ -1,0 +1,125 @@
+---
+title: "Uber Rideshare Data"
+author: "Hannah Peterson"
+date: "2025-09-01"
+output: html_document
+---
+
+### Overview of Data
+
+This data set contains data via Uber ride transactions in order to evaluate for any patterns of concern when it comes to ride-share cancellations, and can be utilized for various analysis of topics such as frequented locations for pick up and drop off, how Uber ride ratings can be related/effected by ride duration time, vehicle type, payment methods, etc.
+
+#### Looking into the data
+
+```{r, include=FALSE}
+library(readr)
+library(tidyverse)
+source <- "~/Downloads/rides.csv"
+new_source <- "/Users/hannahpeterson/Data_Portfolio/Project/rides.csv"
+
+file.rename(from = source, to = new_source)
+```
+
+The CSV file, titled "chronic_disease_indicators" contains the data we will work with.
+
+```{r}
+# titling our data an easier, accessible title
+rides <- read.csv(".//rides.csv")
+
+head(rides) # top 6 rows
+```
+
+### Cleaning Up the Data
+
+I'd first like to rid of unnecessary data or clutter. I am going to read and select specific columns to decide whether they are necessary for our exploration and follow up with a rename/reorganization of the remaining data.
+
+As of immediate understanding of the data, both "Booking.ID" "Customer.ID" are unnecessary for a broad view of our data, as these are personal and case-by-case identifiers. Before removing them, however, I will make sure there are no duplicate rows.
+
+```{r}
+sum(duplicated(rides))
+# There are no duplicate rows so I will remove both identifying variables
+rides <- rides |> select(-Booking.ID, -Customer.ID)
+```
+
+Now lets separate the data by cancelled rides by customer, cancelled rides by driver, incomplete rides, no driver found, and completed rides.
+
+```{r}
+complete <- rides |> filter(Booking.Status == "Completed")
+```
+
+### Exploratory Data Analysis (EDA)
+
+Before creating any models, I would first like to explore how differing variables interact with outcomes in this set. For simplicity, I want to look at which variables in our complete data set have a statistically significant interaction with ride scores and their effect on them overall. For an extension of exploration, I want to see how variables in each set interact with cancelled outcomes, as in, how can distance, location, time to pickup, trip duration, fare, payment methods or time of day correlate with rides being cancelled by drivers or riders. For the no driver or incomplete rides, there are not enough variables to explore an association and an outcome with so we will ignore those sets.
+
+#### Complete Rides - Customer Ratings vs. Booking Value, Driver Arrival Time, Trip Duration, and Ride Distance
+
+Starting with the "complete" data set, we know we want to see how each variable interacts with customer rating or "Customer.Rating". Lets see if there is a visual correlation with any of these variables. Specifically, I want to evaluate
+
+```{r}
+# after first attempt I recognize variables are in character class so I am changing to numeric first
+complete$Booking.Value <- as.numeric(complete$Booking.Value)
+complete$Customer.Rating <- as.numeric(complete$Customer.Rating)
+complete$Avg.VTAT <- as.numeric(complete$Avg.VTAT)
+complete$Avg.CTAT <- as.numeric(complete$Avg.CTAT)
+complete$Ride.Distance <- as.numeric(complete$Ride.Distance)
+
+
+# correlation with numeric variables
+cor.test(complete$Booking.Value, complete$Customer.Rating) # Booking Value
+cor.test(complete$Avg.VTAT, complete$Customer.Rating) # Average time for driver to reach pickup location
+cor.test(complete$Avg.CTAT, complete$Customer.Rating) # Average trip duration
+cor.test(complete$Ride.Distance, complete$Customer.Rating) # Ride distance in km
+
+```
+
+Looking at a general correlation for each value alongside the customer rating, these correlations display little linearity to customer rating impact and with an alpha level set at 0.05, we are failing to reject the null. However, for the sake of exploring, lets do a regression model just to see how these variables interact with customer rating together:\
+
+```{r}
+complete_2 <- complete |> select(Customer.Rating, Booking.Value, Avg.VTAT, Avg.CTAT, 
+                               Ride.Distance)
+
+model_complete <- lm(Customer.Rating ~ Booking.Value + Avg.VTAT + Avg.CTAT + Ride.Distance,
+            data = complete_2) # fitting model
+
+# clean output
+library(broom)
+library(car)
+tidy(model_complete) |>
+  mutate(Significant = if_else(p.value < 0.05, "Significant", "Not Significant"))
+
+vif(model_complete) # Always check multicollinearity for safety
+```
+
+Based on both our correlation test and the regression model, there seems to be no statistically significant impact of any of the four variables for completed rides that impact a customers rating. We also tested for multicollinearity and found that it is not effecting my model, therefor the results found from the regression model are accurate.
+
+#### Complete Rides - Customer Ratings vs. Vehicle Type, Pickup Location, Drop Off Location, Payment Method
+
+Given these variables are categorical, an ANOVA test to check for significant impact on our customer ratings would be the best course of action. Requirements to run ANOVA include exclusion of outliers, homogeneity, and normality. Lets check for all three.
+
+```{r}
+library(ggplot2) # boxplots will display normality and outliers
+ggplot(complete, aes(x= Vehicle.Type, y = Customer.Rating)) + geom_boxplot()
+ggplot(complete, aes(x= Pickup.Location, y = Customer.Rating)) + geom_boxplot()
+ggplot(complete, aes(x= Drop.Location, y = Customer.Rating)) + geom_boxplot()
+ggplot(complete, aes(x= Payment.Method, y = Customer.Rating)) + geom_boxplot()
+```
+
+Not only can we see that each level of the given variables is not normal, they also all contain outliers. Given this, a Kruskal-Wallis test would better fit our data since ANOVA assumptions were violated.
+
+```{r}
+kruskal.test(Customer.Rating ~ Vehicle.Type, data = complete)
+kruskal.test(Customer.Rating ~ Pickup.Location, data = complete)
+kruskal.test(Customer.Rating ~ Drop.Location, data = complete)
+kruskal.test(Customer.Rating ~ Payment.Method, data = complete)
+```
+
+We again are seeing no statistically significant impact on customer ratings on given variables. Overall with this data set exploration, we can conclude that customers ratings are independent of both numeric and categorical variables recorded in this data set.
+
+#### All Rides - Cancelled/Completed vs. Average Driver Arrival Time, Average Trip Duration, Fare, and Distance Covered (km)
+
+As we have before, we will now explore correlation between a canceled ride. For this approach, we will use a multinational logistic regression approach since our "Booking.Status" variable uses three levels we want to work with: "Cancelled by Driver", "Cancelled by Customer", and "Completed". We want to see how these numeric categories (Average Driver Arrival Time, Average Trip Duration, Fare, and Distance Covered (km)) effect cancellation and completion.
+
+```{r}
+library(nnet)
+# there is "incomplete" and " 
+```
