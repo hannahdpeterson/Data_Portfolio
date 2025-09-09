@@ -23,7 +23,7 @@ The CSV file, titled "rides.csv" contains the data we will work with.
 
 ```{r}
 # titling our data an easier, accessible title
-rides <- read.csv(".//rides.csv")
+rides <- read.csv("rides.csv")
 
 head(rides) # top 6 rows
 ```
