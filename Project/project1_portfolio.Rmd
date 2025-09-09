@@ -14,13 +14,12 @@ This data set contains data via Uber ride transactions in order to evaluate for 
 ```{r, include=FALSE}
 library(readr)
 library(tidyverse)
-source <- "~/Downloads/rides.csv"
-new_source <- "/Users/hannahpeterson/Data_Portfolio/Project/rides.csv"
-
-file.rename(from = source, to = new_source)
+source <- "~//rides.csv"
+# new_source <- "/Users/hannahpeterson/Data_Portfolio/Project/rides.csv"
+# file.rename(from = source, to = new_source)
 ```
 
-The CSV file, titled "chronic_disease_indicators" contains the data we will work with.
+The CSV file, titled "rides.csv" contains the data we will work with.
 
 ```{r}
 # titling our data an easier, accessible title
@@ -104,7 +103,7 @@ ggplot(complete, aes(x= Drop.Location, y = Customer.Rating)) + geom_boxplot()
 ggplot(complete, aes(x= Payment.Method, y = Customer.Rating)) + geom_boxplot()
 ```
 
-Not only can we see that each level of the given variables is not normal, they also all contain outliers. Given this, a Kruskal-Wallis test would better fit our data since ANOVA assumptions were violated.
+Each of our variables have outliers, which defies the requirements for an ANVOA test. Given this, a Kruskal-Wallis test would better fit our data since ANOVA assumptions were violated.
 
 ```{r}
 kruskal.test(Customer.Rating ~ Vehicle.Type, data = complete)
@@ -115,11 +114,58 @@ kruskal.test(Customer.Rating ~ Payment.Method, data = complete)
 
 We again are seeing no statistically significant impact on customer ratings on given variables. Overall with this data set exploration, we can conclude that customers ratings are independent of both numeric and categorical variables recorded in this data set.
 
-#### All Rides - Cancelled/Completed vs. Average Driver Arrival Time, Average Trip Duration, Fare, and Distance Covered (km)
+#### All Rides - Cancelled/Completed vs. Average Driver Arrival Time
 
-As we have before, we will now explore correlation between a canceled ride. For this approach, we will use a multinational logistic regression approach since our "Booking.Status" variable uses three levels we want to work with: "Cancelled by Driver", "Cancelled by Customer", and "Completed". We want to see how these numeric categories (Average Driver Arrival Time, Average Trip Duration, Fare, and Distance Covered (km)) effect cancellation and completion.
+We will now explore the relationship between booking status (cancelled and completed rides) in association with the drivers average arrival time. The reason we are only using this variable is because this predictor is the only one that is numeric and recorded regardless of whether the ride is cancelled or not. I am also interested to see if a longer driver arrival time may impact whether or not the ride is cancelled. We will use multinomial logistics to explore this because we have a dependent variable with three levels and a numeric predictor. This is best suited for multinomial logistics regression modeling:
 
 ```{r}
 library(nnet)
-# there is "incomplete" and " 
+# there is "incomplete" and "No Driver Found" which do not need to be included as they add no further value to the alternative variables. I am filtering them out.
+all_rides <- rides |>
+  filter(Booking.Status %in% c("Cancelled by Driver", 
+                               "Cancelled by Customer",
+                               "Completed")) |> select(Avg.VTAT, 
+                                                       Booking.Status)
+# checking numeric variables and making sure booking status is a factor
+all_rides <- all_rides |>
+  mutate(
+    Avg.VTAT = as.numeric(Avg.VTAT),
+    Booking.Status = as.factor(Booking.Status) # factor since its our dependent
+  )
+# releveling
+all_rides$Booking.Status <- relevel(all_rides$Booking.Status, ref = "Completed")
+
+# now we can conduct multinomial logistics
+ml_model <- multinom(Booking.Status ~ Avg.VTAT, data = all_rides)
+summary(ml_model)
+
+# computing p-values because multinom doesn't do automatically
+z <- summary(ml_model)$coefficients / summary(ml_model)$standard.errors
+p_values <- 2 * (1 - pnorm(abs(z)))
+
+p_values
 ```
+
+"Completed" was chosen as our baseline for our multinomial regression model in order to view how cancellations by customers and drivers compare to completed rides. We received a p-value derived from our model indicating that our findings are statistically significant. For our "Cancelled by Customer" coefficient, we received a 0.305 (log-odds) which means that as the drivers average arrival time increased, the customers are more likely to cancel compared to a completed ride. For our "Cancelled by Driver" coefficient, a -0.079 (log-odds) was found which indicates that as drivers average arrival time increased, drivers are less likely to cancel compared to a completed ride.
+
+What this means in summary is that as the wait times get longer, a customer is more likely to cancel but a driver is not.
+
+#### Visualization:
+
+```{r}
+library(ggplot2)
+
+ggplot(all_rides, aes(x = Booking.Status, y = Avg.VTAT, fill = Booking.Status)) +
+  geom_boxplot() +
+  labs(title = "Driver Arrival Time vs. Booking Outcome",
+       x = "Booking Outcome",
+       y = "Average Driver Arrival Time") +
+  theme_classic()
+
+```
+
+The graph visualization adds value to the data, as we can see there seems to be a "safe zone" for completed rides. When average driver arrival time is not too long, customers do not cancel, and when driver arrival times are not early, the drivers do not cancel. Looking at the boxplot, I can see that drivers seem to cancel more often when there arrival time is predicted to be sooner, which opens questions to whether drivers are cancelling rides that are nearby because they are providing less payment, perhaps, for that ride given its distance. Customer cancellations have an obvious correlation with higher driver arrival times, likely reflecting impatience from riders. Completed rides have a middle ground between the two, but no where near as high for average arrival time as the ones cancelled by customers.
+
+### Conclusion
+
+Following our exploration, I have a few asks of future studies. I believe that it would be valuable to include what the original cost of the ride was for rides regardless of cancellation, as in this study they replaced any cancelled ride with "null" in the Booking.Value category, which was a category that recorded the price of the ride. I feel this could have shown value in if the payment is reflecting distance appropriately, and may be a driving reason for driver cancellations. If drivers are feeling they are being under payed, compensating correctly may influence less driver cancellations which could benefit Uber in the long run given more accessible rides and happier customer base. However, we were able to find that correlation between average driver arrival time and driver and customer cancellation.
