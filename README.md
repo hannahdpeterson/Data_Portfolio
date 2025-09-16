@@ -29,4 +29,4 @@ Both Files contain the Dates, Symbol, Company, Rank, Percent Change, Price, Volu
 
 I have also added fun scrapes just to show a little more versatality: A scrape of protein bars prices, flavor and brand coming from GNC:
 [Protein Bar Scrape](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/gnc_scrape.R) and the data frame: [GNC Data](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/gnc2_clean.csv)
-and a scrape from a popular free-watch anime site: [Anime Scrape](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/quick_anime_site_scrape.R)
+and a scrape from a popular free-watch anime site: [Anime Scrape](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/quick_anime_site_scrape.R) and the data frame: [Anime Data](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/anime.csv)
