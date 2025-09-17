@@ -20,3 +20,4 @@ anime <- anime %>%
   mutate(duration_min = str_remove(duration_min, "m") %>% as.numeric())
 
 view(anime)
+write_csv(anime, "anime.csv")
