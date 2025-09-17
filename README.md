@@ -24,7 +24,7 @@ and my gaining stocks are here:
 
 As you can see, simple scrape, but the addition to a data frame overtime allows for insights and exploration as to which stocks appear the most often, what patterns can be seen, and changes specifically made in the market. If you would like to view the current data I have collected so far:
 Both Files contain the Dates, Symbol, Company, Rank, Percent Change, Price, Volume, and Market Cap.
-[Losing Stocks Collective Data](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/L_Stocks_History.csv)
+[Losing Stocks Collective Data](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/L_Stocks_History.csv) and 
 [Gaining Stocks Collective Data](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/Scraping_Sets/Stocks_History.csv)
 
 I have also added fun scrapes just to show a little more versatality: A scrape of protein bars prices, flavor and brand coming from GNC:
