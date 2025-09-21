@@ -32,6 +32,18 @@ stocks <- stocks |>
 # Saving to a file for additions 
 file <- "Stocks_History.csv"
 
+# was having trouble with scraped data matching class's in old data so added:
+stocks <- stocks |> 
+  mutate(
+    number = as.numeric(number),
+    symbol = as.character(symbol),
+    company = as.character(company),
+    perc_change = as.numeric(perc_change),
+    price = as.numeric(price),
+    volume = as.numeric(volume),
+    market_cap = as.numeric(market_cap),
+    date = as.Date(date))
+
 # combining with old data if theres old data present
 if (file.exists(file)) {old <- read_csv(file, show_col_types = FALSE)
   

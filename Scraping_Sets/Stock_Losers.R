@@ -55,3 +55,4 @@ if (file.exists(file)) {old <- read_csv(file, show_col_types = FALSE)
     Today's dates already exist in the file. No additions made."
                                              )}} else 
                                                {write_csv(l_stocks, file)}
+
