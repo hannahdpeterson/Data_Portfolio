@@ -18,7 +18,7 @@ Data obtained via [Kaggle](https://www.kaggle.com/datasets/yashdevladdha/uber-ri
 Language: R
 Tools: Tidyverse
 
-### IBM Stock Prices Predictions
+### IBM Stock Price Predictions
 [IBM Stock Price Predictor Project](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/IBM_Stock_Predictions)
 Data obtained via [Kaggle](https://www.kaggle.com/datasets/shahlaliaquat/ibm-stock-prices-19802025)
 * Data obtained stock prices for the opening and closing of each open market day since 1980 for IBM
