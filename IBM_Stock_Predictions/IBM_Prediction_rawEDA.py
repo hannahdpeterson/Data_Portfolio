@@ -43,6 +43,13 @@ plt.title('IBM Adj Close Over Time')
 plt.xlabel('Date')
 plt.ylabel('Price')
 plt.show()
+# Looking at the plot we can see that IBM Adj Close has drastically increased 
+# overtime, with steep increases right around the early 2000's and 2024. There
+# are more gradual increases around 2008 - 2014 and 2020-2024/ Up until the late
+# 1990's there seems to have been very low Adj Close with this stock.
+
+# lets run a correlation matrix to see
+
 
 
 
