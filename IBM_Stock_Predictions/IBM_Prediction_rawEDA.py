@@ -6,7 +6,7 @@ IBM = pd.read_csv("IBM_Stocks.csv")
 IBM['Date'] = pd.to_datetime(IBM['Date'])
 
 
-# My goal with this data set loaded from Kaggle is to display my modeling skills 
+# My goal with this data set is to display my modeling skills 
 # and abilities. I want to use this set to show how I can take raw data, run
 # tests, create a reliable and statistically significant model, and accurately
 # predict the following days ADJ closing price.
@@ -48,18 +48,28 @@ plt.show()
 # are more gradual increases around 2008 - 2014 and 2020-2024/ Up until the late
 # 1990's there seems to have been very low Adj Close with this stock.
 
-# lets run a correlation matrix to see
+# Before running any tests and designing our model, I first want to clean the
+# data up a bit. 
+# I will first remove missing values if present
+print(IBM.isnull().sum())
+IBM = IBM.dropna() 
+# And I then will remove any duplicate rows
+IBM = IBM.drop_duplicates()
+print(IBM.dtypes) # checking variables are assigned to their correct types
+IBM = IBM.sort_values('Date') # checking assortment of data
 
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 
+models = {
+    "Linear Regression": LinearRegression(),
+    "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42)
+}
 
-
-
-
-
-
-
-
-
-
-
-
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    preds = model.predict(X_test)
+    mse = mean_squared_error(y_test, preds)
+    r2 = r2_score(y_test, preds)
+    print(f"{name}: MSE={mse:.4f}, R²={r2:.4f}")
