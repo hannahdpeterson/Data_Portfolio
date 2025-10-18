@@ -9,6 +9,15 @@ Each project demonstrates my knowledge and ability to use applications for thoro
 
 # Projects
 ### Data Analysis and Exploration Projects
+[Student Performance Modeling: Designing the Most Accurate Model using 5 Data Mining Approaches](https://github.com/hannahdpeterson/Data_Portfolio/blob/main/ML%2C%20Modeling%2C%20%26%20Algorithms/ML_Modeling.pdf)
+Data obtained via [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/320/student+performance)
+* Data contains 649 rows, 30 variables
+* Provides social, educational, situational, etc records - all survey obtained 
+* The [Paper](https://www.semanticscholar.org/paper/Using-data-mining-to-predict-secondary-school-Cortez-Silva/61d468d5254730bbecf822c6b60d7d6595d9889c) uses five data mining techniques: Neural Networks, Support Vector Machines, Decision Trees, Random Forest, and Naive Predictors. Three supervised approaches were taken for the models: Binary (Pass/Fail), 5-level Classification, Regression. We analyzed the authors approach and conclusions and decided to replicate their study by removing variables G1 and G2 fully due to their multicollinearity bias that affects the regression models. We intend to replicate the study but with a model that predicts final grade (G3) without utilization of G1 and G2.
+* Cleaned data, tested and visualized, drew conclusion from statistical analysis.
+Language: R
+Tools: Tidyverse, Cars, rpart, nnet
+
 [Uber Rides Data Analytics](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Uber%20Rides%20Data%20-%20Data%20Exploration)
 Data obtained via [Kaggle](https://www.kaggle.com/datasets/yashdevladdha/uber-ride-analytics-dashboard/data)
 * Data contains 148770 bookings
