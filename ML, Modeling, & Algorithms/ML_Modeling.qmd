@@ -306,18 +306,511 @@ Furthermore, more pre-processing was established with nominal variables as well.
 
 ## Modeling Procedures
 
-According to the paper that we are replicating, their goal was to "give a simple description that summarizes the best DM models". My colleague and I want to take a slightly different approach where we utilize this data to create a model signifying a different usage of the model. The authors used this model as it was collected, essentially creating a model that could be used to predict student outcomes once the student was in their third trimester of the class.
+According to the paper that we are replicating, their goal was to "give a simple description that summarizes the best DM models". The authors used this model as it was collected, essentially creating a model that could be used to predict student outcomes once the student was in their third trimester of the class. We intend to work with the same desired prediction and usage of the variables.
 
-In order to differentiate our model from theirs while still replicating the study, we wish to take the approach that the model is used prior to a students choice to enroll in a class. Essentially, our model see's to predict a students outcome in the class using variables that are known prior to class enrollment so that a user could predict their grade before enrollment, potentially steering students towards or away from the class given their predicted outcome score (if our model proves statistically significant). This would mean removing variables G1 and G2 given their grades would not be recorded if the class was not yet taken. We would also be required to remove `studytime,` `schoolsup`, `paid`, `absences` as each of these variables are inclusive of information that can only be obtained while being currently enrolled in the class.
+In order to differentiate our model from theirs while still replicating part of the study, we wish to take the approach that the model is used prior to a students choice to enroll in a class. Essentially, our model see's to predict a students outcome in the class using variables that are known prior to class enrollment so that a user could predict their grade before the third trimester. Essentially, this means removing G1 and G2 as predictive variables.
 
-We understand the choice of the authors to use an A-B-C subset method, however, given our full removal of G2 and G1, we decided to solely select subset (C). Exclusion of G1 and G2 would indicate a model that can predict a students grade prior to finishing trimester 1.
+We understand the choice of the authors to use an A-B-C subset method, however, given time constraint, we decided to solely select subset (C). Not including G1 or G2 would indicate a model that can predict a students grade for trimester 3 without considering trimester 1 and 2.
 
-We will prioritize replicating the models used to predict outcomes for the Portuguese course (which has more observations, 649 v. 395) for time constraint, and only reproduce models with input C, as we want to view prediction power without the utilization of G1 and G2 grades, due to our differing model usage.
+We will prioritize replicating two of their original models - Decision Tree (DT) and Random Forest (RF). However, we plan to add three of our models: Support Vector Machine, LASSO Regression (LR), and Logistic Regression with PCA. We will utilize the binary (pass/fail) outcome on all models. We will predict outcomes for the Portuguese course (which has more observations, 649 v. 395) due to the time constraint, and only reproduce models with input C, as we want to view prediction power without the utilization of G1 and G2 grades.
 
 Note on data splitting:
 
-The paper states: "To access the predictive performances, 20 runs of a 10- fold cross-validation (Hastie et al. 2001) (in a total of 200 simulations) were applied to each configuration. Under such scheme, for a given run the data is randomly divided in 10 subsets of equal size. Sequentially, one different subset is tested (with 10% of the data) and the remaining data used to fit the DM technique. At the end of this process, the evaluated test set contains the whole data set, although 10 variations of the same DM model are used to create the predictions."
+The paper states: "To access the predictive performances, 20 runs of a 10- fold cross-validation (Hastie et al. 2001) (in a total of 200 simulations) were applied to each configuration. Under such scheme, for a given run the data is randomly divided in 10 subsets of equal size. Sequentially, one different subset is tested (with 10% of the data) and the remaining data used to fit the DM technique. At the end of this process, the evaluated test set contains the whole dataset, although 10 variations of the same DM model are used to create the predictions."
 
-To replicate the data we will not do an initial 20-80 split but run the 10-fold cross-validation on our models. This comes out to about 10% of the data utilized per fold, so 90% of our data will be used to train the models, and 10% will be used to test the data.
+We will do an initial 20-80 split and run cross-validation on most of our models.
 
-In summary, we intend to replicate this study, with key differences: we intend to use solely setup (C), we will remove variables `studytime,` `schoolsup`, `paid`, `absences`, `G1`, and `G2`, and examine solely the Portuguese course data for time constraint reasons.
+In summary, we intend to replicate this study, with key differences: we intend to use solely setup (C), we intend to replicate Decision Tree and Random Forest from the original paper but create three models of our own. We will use a binary response variable of pass/fail.
+
+\newpage
+
+# Part 2: Model Fitting - Binary; Set Up C
+
+## Modeling Set Up - Creating Five Level, and Pass/Fail
+
+```{r}
+portuguese |>
+    mutate(pass_fail=case_when(
+      G3>=10 ~ "Pass",
+      G3<10 ~ "Fail"
+    )) -> portuguese2
+
+portuguese2 <- portuguese2 %>%
+  mutate(across(c(pass_fail, romantic, internet, higher, nursery, activities, paid, famsup, schoolsup, guardian, reason, Fjob, Mjob, school, address, famsize, Pstatus, sex), as.factor))
+
+# create training and testing data for PCA Logistic Regression, DT and RF
+set.seed(627)
+train.pct <- 0.8
+Z <- sample(nrow(portuguese2), floor(train.pct*nrow(portuguese2)))
+portuguese.data <- portuguese2[Z, ]
+holdout.data <- portuguese2[-Z, ]
+
+# standardize and one-hot-encoding for LASSO and SVM:
+nominals <- c("Mjob", "Fjob", "reason", "guardian", 
+                  "address", "famsize", "Pstatus", "sex", "school")
+numeric <- c("age", "absences")
+neither <- c("Medu","Fedu","traveltime","studytime","failures",
+                "famrel","freetime","goout","Dalc","Walc","health",
+                "romantic","internet","higher","nursery","activities",
+                "paid","famsup","schoolsup")
+
+scaled_train <- scale(portuguese.data[, numeric])
+scaled_holdout <- scale(holdout.data[, numeric], 
+                        center = attr(scaled_train, "scaled:center"), 
+                        scale  = attr(scaled_train, "scaled:scale")) 
+# scaling numerics - required outside research
+
+# for one-hot-encoding, converst to 1-of-c using all nominals
+training_nominals <- model.matrix(~ . - 1, data = portuguese.data[, nominals])
+holdout_nominals <- model.matrix(~ . - 1, data = holdout.data[, nominals])
+
+# combines all of our 1 of c and numeric scaled variables together
+portuguese.data_scaled <- cbind(pass_fail = portuguese.data$pass_fail,
+  scaled_train, portuguese.data[, neither], training_nominals)
+holdout.data_scaled <- cbind(pass_fail = holdout.data$pass_fail,
+  scaled_holdout, holdout.data[, neither], holdout_nominals)
+```
+
+Note: we will use cross validation (as requested in the project instructions) and 20% testing 80% training data. As per the paper: "Before fitting the models, some preprocessing was required by the NN and SVM models. The nominal variables (e.g `Mjob`) were transformed into a 1-of-C encoding and all attributes were standardized to a zero mean and one standard deviation" (Hastie et al. 2001). So by doing so, we are replicating the paper more closely. This structure is only applied to SVM, but also applied to our LASSO as upon our research on how to compute 1-of-c, we discovered its best practice to also apply this to our LASSO because it is penalty-based model.
+
+### Model 1: Logistic Regression with PCA - Binary Outcome
+
+Below is our model, followed by assumptions to assure reliability.
+
+```{r}
+# remember we are removing G3 and five_level since those are for other outcomes
+library(dplyr)
+lrpca <- glm(pass_fail ~ . -G3 -G2 -G1, data = portuguese.data, 
+          family = binomial) 
+```
+
+Lets check and see how it is performing pre-PCA:
+
+```{r}
+summary(lrpca)
+```
+
+Our model is showing an residual deviance of 305.82, so our model is so and so on the portion of the variance in pass_fail. This was expected when removing G2 and G1.
+
+Now lets utilize PCA's to create a more tuned model:
+
+```{r}
+portuguese_X <- model.matrix(lrpca)[, -1]
+pca <- prcomp(portuguese_X)
+summary(pca)
+```
+
+I want to look at both scaled and unscaled data to see if unscaled fits better (likely, given our differing ranges in scaled data)
+
+```{r}
+portuguese_pcs <- prcomp(portuguese_X, scale=TRUE)
+
+par(mfrow=c(1, 2))
+plot(pca, main="PCs of Unscaled Data")
+screeplot(portuguese_pcs, main="PCs of Scaled Data")
+```
+
+Based on the visual, scaling is better here. We will now view the variance of our pca's to decide how many to include in our model:
+
+```{r}
+library(pls)
+portuguese.data_01 <- portuguese.data |>
+  mutate(pass_fail = ifelse(pass_fail == "Pass", 1, 0))
+
+portguese_pcr <- pcr(pass_fail ~ . -G3 -G2 -G1, 
+                     data = portuguese.data_01, family = binomial, 
+                     scale = TRUE, validation = "CV")
+
+summary(portguese_pcr)
+validationplot(portguese_pcr, val.type = "RMSEP")
+```
+
+Based on the plot displaying our RMSEP, points at around 9, 16, and 33 components should give us the lowest RMSEP. When looking at the summary in depth, when comparing adjCV, 16 components had the lowest at .3366 followed by 33 at .3371 and 9 at .3381. We will select 16 components.
+
+For measure, we will run a loss function and calculate the cross-validation error rate. By running through each possible glm() model for each given pca value, it provides us with insight into which principle component selection can provide the lowest cross-validation error rate, aside to our prior calculation where we selected pc's based on RMSEP - Root Mean Squared Error Prediction.
+
+```{r}
+library(boot)
+Y <- portuguese.data_scaled$pass_fail
+loss <- function(Y, pred.p){return(mean((Y==1 & pred.p < 0.5) | # loss function from handout
+                                            (Y==0 & pred.p >= 0.5)))}
+
+cv_error <- function(k, repeats = 20){ # function using k (number of pc's)
+  # paper used 20 funs of a 10 fold cv so we will do this as well
+  pc <- pca$x[, 1:k] # all pc's considered
+  data <- data.frame(pass_fail = Y, pc) # data frame with binary outcome
+  # and pc's for fitting model
+  errors <- numeric(repeats) # repeats 20 times in vector structure
+  for(i in 1:repeats){
+    errors[i] <- cv.glm(data, glm(pass_fail ~ ., family = binomial, data=data),
+                        cost = loss, K = 10)$delta[1]} # cv for 10 fold and finds best cv.error
+  mean(errors)} # averages of each of the 20 iterations
+
+errors <- sapply(1:39, cv_error) # 39 because thats how many pc's calculated in rmsep format
+errors
+min(errors)
+plot(1:39, errors, type = "b",
+     xlab = "Number of PCs",
+     ylab = "CV Error Rate")
+
+```
+
+Using this method, the lowest cross-validation error rate was .1571291, for a principal component selection of 19 components. Due to the reliability and closer replication to the paper using a cv.glm() model, we will likely select 19 components as our models final selection.
+
+```{r}
+predicted_pcr <- predict(portguese_pcr, newdata = portuguese.data_01,
+                         ncomp = 16)
+
+# Accuracy based on RMSEP selection of 21 components
+predictions <- predicted_pcr[,1, 1] # wouldnt work with just [,1] needed both
+real_values <- portuguese.data_01$pass_fail
+
+classification <- ifelse(predictions > 0.5, 1, 0) # funneling to 0 or 1
+accuracy_rate <- mean(classification == real_values)
+accuracy_rate
+
+
+table(Predicted = classification, Actual = real_values)
+
+predicted_pcr_cv <- predict(portguese_pcr, newdata = portuguese.data_01,
+                         ncomp = 19)
+
+# Accuracyn based on cross-validation selection of 17 components
+predictions <- predicted_pcr_cv[,1, 1] # wouldnt work with just [,1] needed both
+real_values_cv <- portuguese.data_01$pass_fail
+
+classification_cv <- ifelse(predictions > 0.5, 1, 0) # funneling to 0 or 1
+accuracy_rate_cv <- mean(classification_cv == real_values_cv)
+accuracy_rate_cv
+
+
+table(Predicted = classification_cv, Actual = real_values_cv)
+```
+
+Our accuracy rate was actually pretty good, with our model accurately predicting 84.97% of our data correctly with 16 components and 84% with 19 components. I also added a matrix to look at specifically what the model is doing well or poorly. For both, it accurately categorized most of the passing students correctly, and seems to inaccurately predict those who failed the class overall, with 68 vs 70 of those who failed being classified by the models as passed, versus 16 vs 14 correct predictions of those who failed. Overall, our model seems to do well at predicting if you passed, when you actually do pass. It is not the best at predicting the failing students.
+
+Given the slightly better correct classification rate of 19 components, we will utilize that as our final model.
+
+### Model 2: Lasso Regression - Binary
+
+```{r}
+library(boot)
+library(glmnet)
+
+portuguese.data_01_scaled <- portuguese.data_scaled |>
+  mutate(pass_fail = ifelse(pass_fail == "Pass", 1, 0)) # needed 0,1 to run
+
+portuguese.glm <- glm(pass_fail ~ ., 
+                      data = portuguese.data_01_scaled)
+X <- model.matrix(portuguese.glm) [,-1]
+
+set.seed(627)
+portuguese_lasso <- cv.glmnet(x = X, y = portuguese.data_01_scaled$pass_fail, 
+                              alpha = 1,
+                              family = "binomial")
+portuguese_lasso
+```
+
+I see that our model for the minimum cv error (which was 0.7334) is selecting 9 nonzero predictors, the same amount of components we selected in our PCA model. For 1se, it selected 3 nonzero predictors with a .7722 error rate. Both of these are actually really good error rates for our model. For our model, I would like to select the min model with a 9 of our predictors. Its error rate is far smaller, and the deviance is lower. Even with more complexity as the tradeoff. Lets see which of the predictors were selected.
+
+```{r}
+coef(portuguese_lasso, s = "lambda.min")
+
+predictions <- predict(portuguese_lasso, newx = X, s = "lambda.min", type = "response")
+classification <- ifelse(predictions > 0.5, 1, 0)
+mean(classification == portuguese.data_01_scaled$pass_fail)
+```
+
+It predicted 84.97% of the training data correctly. There are 9 nonzero predictors. For caution, we will produce a model that displays error changes across differing lambda values:
+
+```{r}
+plot(portuguese_lasso)
+abline(v = log(portuguese_lasso$lambda.min), lty = 2)
+abline(v = log(portuguese_lasso$lambda.1se), lty = 2)
+legend("topright", legend = c("lambda.min", "lambda.1se"))
+```
+
+Our model is displaying that 9 variables was a good fit. Visualization of our predictors as they are shrunk:
+
+```{r}
+plot(portuguese_lasso$glmnet.fit, xvar = "lambda", label = TRUE)
+```
+
+### Model 3: Decision Tree
+
+```{r}
+set.seed(627) 
+library(tree) 
+tree_initial<-tree(pass_fail ~ . -G3-G2-G1, data=portuguese.data) 
+summary(tree_initial) 
+```
+
+```{r}
+plot(tree_initial)
+text(tree_initial, pretty=0)
+```
+
+The initial tree uses 15 variables, has 22 terminal nodes, and is very busy; the model could possibly overfit our data, so we will now tune the tree.
+
+Tuning tree:
+
+```{r}
+set.seed(627)
+cv.tree.model<- cv.tree(tree_initial, FUN=prune.misclass, K=10)
+cv.tree.model
+plot(cv.tree.model$size, cv.tree.model$dev, type="b")
+tuned_tree<-prune.misclass(tree_initial, best=3)
+plot(tuned_tree)
+text(tuned_tree, pretty=0)
+```
+
+The tuned model is best with 3 terminal nodes. It only uses two variables: failures and reason. Note that reason is a categorical variable with 4 options, course and other being two of the options.
+
+#### Model 4: Random Forest
+
+```{r}
+library(randomForest)
+set.seed(627)
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=6, importance=TRUE)->RF6
+RF6
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=5, importance=TRUE)->RF5
+RF5
+set.seed(627)
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=4, importance=TRUE)->RF4
+RF4
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=7, importance=TRUE)->RF7
+RF7
+```
+
+Looking at the OOB estimate of error rate, and keeping in mind the ideal of m = sqrt(p), we tried making m 4, 5, 6, and 7 (we have 30 predictors in the model). The model with m=6 produces the smallest OOB error rate of 15.41.
+
+looking at RF variable importance:
+
+```{r}
+importance(RF6)
+varImpPlot(RF6)
+```
+
+Failure seems to be very important in improving the accuracy, followed by school and absences.
+
+```{r}
+plot(RF6)
+```
+
+The above graph shows the overall error rate of the model (black line) and the false positives (green line) and false negatives (red line). After around 200 trees the error rate roughly stays the same, so we wouldn't need to do 500 iterations of trees if we wanted to save computing power.
+
+We were alsp curious if changing the number of predictors considered at each branch to be the predictor amounts favored in previous models, like 21 and 9, would give better results:
+
+```{r}
+set.seed(627)
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=21, importance=TRUE, ntree = )->RF21
+
+randomForest(pass_fail ~ . -G3-G2-G1, data=portuguese.data, mtry=9, importance=TRUE)->RF9
+
+RF21
+RF9
+```
+
+Our error rate is 16.76%, but we have a relatively better prediction ability for failing students, 10% improvement. We will keep the model with the smaller OOB error rate, which is mtry=6.
+
+### Model 5: Support Vector Machine
+
+```{r}
+library(e1071)
+set.seed(627)
+#Linear kernel
+svm.lin<-svm(pass_fail ~ ., kernel="linear", data=portuguese.data_scaled, cross=10)
+svm.lin$tot.accuracy
+
+#Polynomial Kernel
+svm.pol<-svm(pass_fail ~ ., kernel="polynomial", data=portuguese.data_scaled, cross=10)
+svm.pol$tot.accuracy
+#Radial kernel
+svm.rad<-svm(pass_fail ~ ., kernel="radial", data=portuguese.data_scaled, cross=10)
+svm.rad$tot.accuracy
+#Sigmoid kernel
+svm.sig<-svm(pass_fail ~ ., kernel="sigmoid", data=portuguese.data_scaled, cross=10)
+svm.sig$tot.accuracy
+
+```
+
+I used 10-fold cross validation to create 4 initial SVM models with each kernel and a default cost of 1. They all had similar predication accuracy with the best being a linear kernel at around 84.59% accuracy.
+
+Now I willl use tune() to find the best kernel for each cost, and then pick the best model based on the smallest CV prediction error.
+
+```{r}
+set.seed(627)
+svm.tuning <- tune(svm, pass_fail ~ . , data = portuguese.data_scaled, ranges = list(cost = c(0.01, 0.1, 1, 10, 100), kernel = c("linear", "polynomial", "radial", "sigmoid")))
+svm.tuning
+svm.tuning$best.parameters
+svm.tuning$best.model
+```
+
+The best model has a cost of 100, uses the linear kernel, and has a CV prediction error of 13.5%.
+
+Next I will look at the best model in all of the cost levels:
+
+```{r}
+library(dplyr)
+set.seed(627)
+result.df<-svm.tuning$performances
+
+try<-result.df |> 
+  arrange(cost) |> 
+  select(cost, kernel, error)
+try
+```
+
+The best kernel for cost 100 is linear with an error of 13.5%.
+
+The best kernel for cost 10 is linear with an error of 13.69%.
+
+The best kernel for cost 1 is linear with an error of 14.08%.
+
+The best kernel for cost 0.1 is linear with an error of 15.61%.
+
+The best kernel for cost 0.01 is not linear with an error of 16.19%.
+
+```{r}
+best.svm<-svm(pass_fail ~ ., data = portuguese.data_scaled, cost=100, kernel="linear")
+best.svm
+```
+
+\newpage
+
+## Using Testing data on models
+
+#### Logistic Regression Model with PCA - Binary Setup C
+
+```{r}
+# creating 0,1 for holdout
+portuguese.data_01_holdout <- holdout.data |>
+  mutate(pass_fail = ifelse(pass_fail == "Pass", 1, 0))
+
+testing_pcr <- predict(portguese_pcr, newdata = portuguese.data_01_holdout,
+                         ncomp = 19)
+
+# Accuracy
+predictions <- testing_pcr[,1, 1] # wouldnt work with just [,1] needed both
+real_values <- portuguese.data_01_holdout$pass_fail
+
+pred_class <- ifelse(predictions > 0.5, 1, 0) # funneling to 0 or 1
+accuracy_rate <- mean(pred_class == real_values)
+accuracy_rate
+
+
+table(Predicted = pred_class, Actual = real_values)
+```
+
+Our testing data did even better than our model on the training data, we received 89.23% of accurate predictions, or a misclassification rate of 10.77%.
+
+#### Lasso Regression - Binary Setup C
+
+```{r}
+holdout.data_scaled_01 <- holdout.data_scaled |>
+  mutate(pass_fail = ifelse(pass_fail == "Pass", 1, 0))
+
+portuguese.glm.holdout <- glm(pass_fail ~ ., data = holdout.data_scaled_01)
+
+X <- model.matrix(portuguese.glm.holdout) [,-1]
+
+set.seed(627)
+
+predictions <- predict(portuguese_lasso, newx = X, s = "lambda.min", type = "response")
+classification <- ifelse(predictions > 0.5, 1, 0)
+mean(classification == holdout.data_scaled_01$pass_fail)
+```
+
+The model was better at predicting on the testing data, as the training data was 84.97% and the testing data was 90.77% prediction accuracy, or a misclassification error rate of 9.23%. This model also reflects predictive ability well.
+
+#### Decision Tree Model - Binary Setup C
+
+```{r}
+pred_val<-predict(tree_initial, newdata=holdout.data, type="class")
+table(pred_val, holdout.data$pass_fail)
+mis.class<-mean(pred_val != holdout.data$pass_fail)
+mis.class
+
+```
+
+```{r}
+pred_val2<-predict(tuned_tree, newdata=holdout.data, type="class")
+table(pred_val2, holdout.data$pass_fail)
+mis.class2<-mean(pred_val2 != holdout.data$pass_fail)
+mis.class2
+```
+
+Our initial tree model had a misclassification rate of around 13.08% on our testing data. Tuning the tree with cross validation brings our misclassification rate down to 11.54% which is better, but the model is more inflexible now.
+
+#### Random Forest Model - Binary Setup C
+
+Testing data on tuned model:
+
+```{r}
+rf.pred<-predict(RF6, newdata=holdout.data, type="class")
+table(rf.pred, holdout.data$pass_fail)
+mis.class3<-mean(rf.pred != holdout.data$pass_fail)
+mis.class3
+```
+
+On our tuned model we get a misclassification rate of 12.3%.
+
+Testing data on a non-optimal RF model:
+
+```{r}
+rf.pred2<-predict(RF5, newdata=holdout.data, type="class")
+table(rf.pred2, holdout.data$pass_fail)
+mis.class4<-mean(rf.pred2 != holdout.data$pass_fail)
+mis.class4
+```
+
+The model where mtry=5 had a higher OOB error rate on the training data, but produces a slightly smaller msiclassification rate of 11.53% compared to our choosen RF model. These are similar misclassification rates and likely wouldn't create a big difference when tested on more data.
+
+#### Support Vector Machine Model - Binary Setup C
+
+```{r}
+svm.pred <- predict(best.svm, newdata=holdout.data_scaled)
+err.tab <- mean(holdout.data_scaled$pass_fail != svm.pred)
+err.tab
+```
+
+Misclassification rate on new data: 13.08%.
+
+```{r}
+svm.pred2 <- predict(svm.sig, newdata=holdout.data_scaled)
+err.tab2 <- mean(holdout.data_scaled$pass_fail != svm.pred2)
+err.tab2
+```
+
+Misclassification rate for an untuned sigmoid model is lower than the tuned linear model, at 10.77%.
+
+\newpage
+
+## Conclusions
+
+Below is a table of our final models misclassification error rate on our testing (holdout) data, alongside the papers misclassification error rate for the same models (if present in paper). Note: Our models are utilizing Portuguese data only with setup C (G3 included; G1 and G2 removed).
+
+|                                     | Log w/ PCA               | Lasso                    | DT     | RF    | SVM    |
+|-------------------------------------|--------------------------|--------------------------|--------|-------|--------|
+| Our Misclassification Error Rate    | 10.77%                   | 9.23%                    | 11.54% | 12.3% | 13.08% |
+| Papers Misclassification Error Rate | **Not in initial paper** | **Not in initial paper** | 15.6%  | 15%   | 15.2%  |
+| Our best Models Rank                | 2                        | 1                        | 3      | 4     | 5      |
+
+Our models had a better misclassification error rate overall, which suggests differences in our calculation methods with the papers. Reading over the original paper, they provide detail on setup and validation methods. We made the decision to utilize more of the material learned in class, which included 80/20 split for most methods. We were able to use cross-validation (as used in the paper) for our Logistic Regression with PCA model, LASSO, Decision Tree and SVM. However, for time constraint, we did not utilize the 20 runs of the ten fold, and instead simplified to just one iteration of 10 fold. We did run one instance of 20 iterations of 10 fold on Logistic Regression with PCA, but that was due to the simplicity of the model and therefor its simple computation of these iterations. This would explain why our misclassification values are better than the original papers, for those that apply, as our 80/20 split is less conservative.
+
+However, we replicated the study thoroughly otherwise, computing exactly what is asked of the paper with relevance to what we have learned thus far in the course and what we were able to further research. We believe this study was handled well with the researchers, and if we were to include any critiques it would be to remove the G1 and G2 values fully. While exploring this data, G1 and G2 inclusion affected the reliability of our models closer to a 95% range, indicating an overly predictive ability of G1 and G2.
+
+\
+Finally, it is important to note the difference in failures and passes in the data.
+
+```{r}
+table(portuguese.data$pass_fail)
+table(holdout.data$pass_fail)
+
+```
+
+Given the distribution of pass and fail, where fail is on a far lower end, a poor model could technically predict all values as "Pass" and still have an \~80-86% accuracy rate. While a small amount of failures does reflect the likely real-world distribution of pass and fail grades, it is worth mentioning that models with this type of setup may not be a reliable way to predict passing/failing at all. I believe a replication of this study where we have a much larger data set (\>10000) may provide a more reliable basis for classifying pass and fail grades.
+
+## References
+
+Cortez, P., & Silva, A. (2008). *Using Data Mining to Predict Secondary School Student Performance*. Proceedings of the 5th Annual Future Business Technology Conference.
