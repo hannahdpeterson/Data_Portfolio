@@ -791,7 +791,7 @@ Misclassification rate for an untuned sigmoid model is lower than the tuned line
 Below is a table of our final models misclassification error rate on our testing (holdout) data, alongside the papers misclassification error rate for the same models (if present in paper). Note: Our models are utilizing Portuguese data only with setup C (G3 included; G1 and G2 removed).
 
 |                                     | Log w/ PCA               | Lasso                    | DT     | RF    | SVM    |
-|-------------------------------------|--------------------------|--------------------------|--------|-------|--------|
+|-----------------|-----------|-----------|-----------|-----------|-----------|
 | Our Misclassification Error Rate    | 10.77%                   | 9.23%                    | 11.54% | 12.3% | 13.08% |
 | Papers Misclassification Error Rate | **Not in initial paper** | **Not in initial paper** | 15.6%  | 15%   | 15.2%  |
 | Our best Models Rank                | 2                        | 1                        | 3      | 4     | 5      |
