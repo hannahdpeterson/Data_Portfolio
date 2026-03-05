@@ -28,14 +28,14 @@ Language: R
 Tools: Tidyverse
 
 ### IBM Stock Price Predictions
-[IBM Stock Price Predictor Project](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/IBM_Stock_Predictions)
-Data obtained via [Kaggle](https://www.kaggle.com/datasets/shahlaliaquat/ibm-stock-prices-19802025)
-* Data obtained stock prices for the opening and closing of each open market day since 1980 for IBM
-* Using the Adj Closing as a target of predicting
-* Goal is to create a model that accurately predicts the following days Adj Closing price
-* Explored data, explored data set, tested for best model, created and trained model, tested on given data
-Langauge: Python3
-Tools: Pandas, Matplotlib
+[Expert Systems on Medical Diagnosis Accuracy](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Expert Systems and Medical Diagnosis)
+Data obtained via personal collection and installment
+* Data obtained using two expert systems, 64 rows all collected by input and output records done by hand
+* Exploring how accurate diagnosis are given by expert systems that are commonly utilized in a professional environment
+* Goal is to test if there are any statistical differences between male and female diagnosis accuracy
+* Collected data, explored data set, wilcoxon rank-sum test and visualizations, analysis and limitations, proposal for future study
+Langauge: R
+Tools: tidyverse, online Expert Systems
 
 ### Scraping Sites for Use on Tableau and Power BI
 [Scraping Sites for Data](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Scraping_Sets)
