@@ -27,7 +27,7 @@ Data obtained via [Kaggle](https://www.kaggle.com/datasets/yashdevladdha/uber-ri
 Language: R
 Tools: Tidyverse
 
-### IBM Stock Price Predictions
+### Expert Systems Accuracy on Medical Diagnosis
 [Expert Systems on Medical Diagnosis Accuracy](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Expert%20Systems%20and%20Medical%20Diagnosis)
 Data obtained via personal collection and installment
 * Data obtained using two expert systems, 64 rows all collected by input and output records done by hand
