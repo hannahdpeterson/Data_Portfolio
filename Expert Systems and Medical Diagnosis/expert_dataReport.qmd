@@ -1,0 +1,288 @@
+---
+title: "Expert Systems: Experiment Report"
+author: "Hannah Peterson"
+format: pdf
+editor: visual
+---
+
+## Do medical-based expert systems give biased diagnosis given a user's sex assigned at birth?
+
+#### Background
+
+According the National Institute of Health, women experience a larger amount of time between symptom onset and diagnosis of a disease than men do for most diseases (2023). Delayed diagnosis and under diagnosis poses a public health threat to those who are missed, as the longer a disease goes untreated, the more a patient is susceptible to worsening symptoms and negative impacts to their health. There are several reasons experts propose could be the cause of these diagnosis, ranging from lack of proper studies to systemic issues relating to sexism and misogyny. Regardless, there is statistical evidence of a difference in diagnosis between women and men.
+
+Expert systems are AI-powered software that are meant to mimic human "expert" decision making. Essentially, while they are limited in interactive capabilities, it is used by professionals to provide advice and develop solutions in appropriate settings. An expert system found commonly in a professional setting are medical-based. Positions such as physicians and nurses often utilize these systems to help determine a diagnosis, or help confirm one, prior to finalizing a diagnosis.
+
+#### Motivation
+
+While useful, expert systems being utilized in a professional setting require professional standards. Women being grossly under and misdiagnosed by professionals suggests that this misrepresentation could be relayed to expert systems. As expert systems are programmed and trained by the same experts making these mistakes, I wondered if expert systems had a similar misdiagnosis rate as human experts do. If a misdiagnosis rate or something of similar concern were to be discovered, a larger study should take place to validate these concerns, and further work on fixing the expert system. As these systems are used as tools in the professional setting, they should reflect correct diagnosis. If not, these systems need re-evaluation of whether there usage in a professional setting is appropriate or have the misdiagnosis rate corrected.
+
+#### AI Systems to be Tested
+
+Originally, Glass Health, Ada, Symptoma, and Isabel were the four systems looking to be tested. Due to a free trial limit set on Glass Health and Ada, the only systems used in this study were Isabel and Symptoma.
+
+#### Experimental Method and Data Collection
+
+The data collection began by utilizing Google Gemini to find the most commonly reported symptoms between men vs women for one of the four given diseases: Lupus, Autism, ADHD, and Heart Attack. The top three most reported symptoms (which differ between men and women) are the three symptoms fed to the expert system per value. For each value, the following is collected from what was input to the system prior to output: age (either 5, 25, 45 or 65), gender (female or male), the three symptoms reported for the given gender and disease, and if a system asks additional questions all input is "I don't know". This age, gender, system, and disease is reported as part of the data. Following input, output from the expert system is collected. The output collected is the top five diagnosis the system returns for that input. Any further diagnosis is not collected as data. Reasoning for this is due to the systems emphasis on ranking diagnosis as what it believes is most likely correct to least likely correct, so further than five diagnosis may lead to inconsistency's in analysis as it could fill in random diseases even if it doesn't fit true symptoms for said diagnosis, because the systems are still required to report 10+ diagnosis. If the disease being tested for was present during that search, a "yes" is recorded under variable name "present". If not, it is reported as "no". Finally, a variable "rank" is provided based on when (or if) the system returned the correct diagnosis. For example, if I was testing to see if a 25 year old Female would be properly diagnosed for ADHD, input would be "Female, 25, mental fog, emotional dysregulation, disorganization". Output from the system would be collected as first, second, third, fourth, fifth diagnosis returned by the system. If present as the third diagnosis, I would put "yes" and then a rank "3". If ADHD were not present as any of the top five diagnosis, I would put "no" and rank "6". Essentially, a higher rank indicates correct/better diagnosis abilities, a lower rank would indicate poor diagnosis abilities.
+
+In order to discover if any differences found are statistically significant, I ran a Wilcox-rank sum test on the rank median between men and women of all diagnosis by gender, as the genders are independent and non-normally distributed ranking. The returned p-value provided insight into our data and its significance. Visuals were utilized as well to show the difference in correct reporting between men and women based on each disease and as a whole. I also utilized pi charts to show the distribution of diagnosis types (physical health vs mental health) between men and women.
+
+For clarity as to what specific symptoms were input into the systems, below are the distribution for each gender based on each disease given what Google Gemini provided:
+
+##### Heart Attacks
+
+Female: extreme fatigue, shortness of breath, jaw pain
+
+Male: chest pain, left arm pain, cold sweats
+
+##### ADHD
+
+Female: mental fog, emotional dysregulation, disorganization
+
+Male: hyperactivity, impulsive, disruptive
+
+##### Lupus
+
+Female: extreme fatigue, skin sensitivity and rashes, joint pain
+
+Male: kidney issues, chest pain, cardiovascular issues
+
+##### Autism
+
+Female: sensory overload, social issues, special interests
+
+Male: repetitive behaviors, communication issues, special interests
+
+#### Constants and Controls
+
+There were several controls in this study. First, the 3 symptoms in each gender group were unchanged throughout each age group. Additional follow up questions were always responded with "I don't know". Only 5 outputs were consistently collected, and only those four diseases (ADHD, Heart Attack, Autism, Lupus) were recorded for. The same 4 ages were utilized for each system, per disease. Ranking and presence was consistently collected, there are no NA values.
+
+#### Explanatory Variables
+
+As we are testing the diagnostic variability between men and women, our primary explanatory variable is the "users" sex assigned at birth (Male vs Female). Some others to be considered for potential analysis are the disease being tested, the age category and the system used.
+
+#### Response Variables
+
+As we are testing for diagnosis, the primary response variable is the presence of diagnosis and its rank. So "yes" or "no" as well as the rank at which it was discovered (6 if not discovered at all).
+
+#### Null Hypothesis
+
+The null hypothesis for my study: there is no difference in diagnosis accuracy given to women compared to men when using sex-appropriate disease symptoms associated with said sex in medical-based expert systems.
+
+#### Results and Analysis
+
+```{r, echo=FALSE}
+library(tidyverse)
+experts <- read.csv('expert_data.csv')
+glimpse(experts)
+```
+
+The data here gives a glimpse of how the data was input and named.
+
+```{r, echo=FALSE}
+females <- experts |> filter(gender == 'female') |>
+  group_by(age, disease) |>
+  summarise(average = mean(rank, na.rm = TRUE),
+            .groups = 'drop')
+
+ggplot(females, aes(x = as.factor(age), y = disease, fill = average)) +
+  geom_tile(color = 'white') +
+  scale_fill_gradient(low = 'pink', high = 'darkred', guide = 'legend') +
+  labs(title = "Females Diagnosis Accuracy based on Age and Rank",
+  subtitle = 'Green = Accurately Diagnosed & Red = Inaccurately Diagnosed',
+  x = 'Age of User', y = 'Disease Target Diagnosis', fill = 'rank') + 
+  theme(panel.background = element_rect(fill = "black"))
+
+```
+
+We can see from our representation above that with female users, regardless of age the rank at which diagnosis is correct is does not average at 1. This means that with this current data, systems did not accurately predict the true disease on average as its primary diagnosis for any of the diseases at any age. We do see, however, that heart attacks were correctly diagnosed more often as age grew, and we can see ADHD had an average rank of 6 (no present correct diagnosis) for ages 25-65+. In comparison, we can look at the male diagnosis.
+
+```{r, echo=FALSE}
+males <- experts |> filter(gender == 'male') |>
+  group_by(age, disease) |>
+  summarise(average = mean(rank, na.rm = TRUE),
+            .groups = 'drop')
+
+ggplot(males, aes(x = as.factor(age), y = disease, fill = average)) +
+  geom_tile(color = 'white') +
+  scale_fill_gradient(low = 'pink', high = 'darkred', guide = 'legend') +
+  labs(title = "Males Diagnosis Accuracy based on Age and Rank",
+  subtitle = 'Green = Accurately Diagnosed & Red = Inaccurately Diagnosed',
+  x = 'Age of User', y = 'Disease Target Diagnosis', fill = 'rank') +
+  theme(panel.background = element_rect(fill = "black"))
+
+```
+
+In comparison, males have shown better average ranking for heart attacks, autism, and ADHD, reflecting current studies well. However, I will note that we found lupus to be severely under-diagnosed for male patients regardless of age. This is an interesting find. I will note that this could be related to the fact that 90% of all lupus patients are women vs men, suggesting women are at much higher risk and represent a larger proportion of those with the disease, indicating a system may delay diagnosis for a male as it is inherently less common. Age 65 for men show the most inaccuracies, with autism, ADHD, and lupus providing an average rank of greater than 4.
+
+```{r, echo = FALSE}
+average_rank_female <- experts |>
+  filter(gender == 'female') |>
+  summarise(average_rank = mean(rank, na.rm = TRUE))
+
+print(paste('Female Average Rank Across All Diseases:', average_rank_female$average_rank))
+
+
+average_rank_male <- experts |>
+  filter(gender == 'male') |>
+  summarise(average_rank = mean(rank, na.rm = TRUE))
+
+print(paste('Male Average Rank Across All Diseases:', average_rank_male$average_rank))
+
+
+average_rank_female_nolupus <- experts |>
+  filter(gender == 'female',
+         disease %in% c('heart_attack', 'autism', 'adhd')) |>
+  summarise(average_rank = mean(rank, na.rm = TRUE))
+
+print(paste('Female Average Rank Across All Diseases (no Lupus):', average_rank_female_nolupus$average_rank))
+
+
+average_rank_male_nolupus <- experts |>
+  filter(gender == 'male',
+         disease %in% c('heart_attack', 'autism', 'adhd')) |>
+  summarise(average_rank = mean(rank, na.rm = TRUE))
+
+print(paste('Male Average Rank Across All Diseases (no Lupus):', average_rank_male_nolupus$average_rank))
+```
+
+Females are showing a rank average overall diseases at least \~0.7 higher than men, distinguishing that across all diseases women were incorrectly diagnosed more often then men. Because of the under-diagnosis of Lupus in men, removal of such shows a dramatic difference in diagnosis between women and men. When Lupus is removed for averaging ranking, we find females diagnosis rank average increased slightly, now at an average of 3.6 across all diseases, and the mens rank decreased to 1.875. This put almost 2 point rank difference between men and women in these three diseases.
+
+```{r, echo = FALSE}
+female_rank <-
+  experts |> filter(gender == 'female')
+
+male_rank <-
+  experts |> filter(gender == 'male')
+
+
+wilcox.test(female_rank$rank, male_rank$rank, exact = FALSE)
+
+```
+
+Inclusive of Lupus, the p-value of a Wilcoxon rank-sum test returned \~0.048, which falls below alpha level of 0.05 indicating there is a statistically significant difference in ranking between men and women. I reject the null hypothesis. I will also analyze results without Lupus:\
+
+```{r, echo=FALSE}
+female_rank_nolupus <-
+  experts |> filter(gender == 'female',
+                    disease %in% c('heart_attack', 'autism', 'adhd'))
+
+male_rank_nolupus <-
+  experts |> filter(gender == 'male',
+                    disease %in% c('heart_attack', 'autism', 'adhd'))
+
+
+wilcox.test(female_rank_nolupus$rank, male_rank_nolupus$rank, exact = FALSE)
+
+```
+
+With removal of Lupus, the test returned a p-value of \~0.0005, showing a greater statistical significance between ranking of men and women for the same diseases. Both tests allowed us to reject the null hypothesis. What both of these tests tell us is that our data shows there is a non-coincidental difference in diagnosis ranking between men and women. The differences we found point wise based on averages earlier (3.5 vs 2.8125 and 3.6 vs 1.875) was an effective difference in diagnosis. The data I collected further supports previously drawn conclusions that females are under-diagnosed for a subset of diseases compared to men.
+
+```{r, echo=FALSE}
+no_diagnosis <- experts |>
+  filter(rank %in% c(1, 6))
+ggplot(no_diagnosis, aes(x = gender, fill = factor(rank))) +
+  geom_bar() + labs(title = 'Distribution of Correct Diagnosis vs No Correct 
+                    Diagnosis',
+                    fill = 'Diagnosis Type') + scale_fill_manual(
+                      values = c('1' = 'pink', '6' = 'darkred'),
+                      labels = c('1' = 'First, Correct Diagnosis', '6' = 'Undiagnosed')
+                    ) + theme(panel.background = element_rect(fill = "gray"))
+```
+
+This graph here is showing the distribution between first, correct diagnosis of persons (rank 1) and undiagnosed persons (rank 6). While men have slightly more reported incorrect diagnosis, they also carry a wider range of correct diagnosis in comparison to females.
+
+```{r, echo=FALSE}
+all_diseases_female <- experts |>
+  filter(gender == 'female', present == 'no') |>
+  pivot_longer(
+    cols = c(top_d, second_d, third_d, fourth_d, fifith_d),
+    values_to = 'top_diseases'
+  )
+
+top_5_female <- all_diseases_female |>
+  count(top_diseases, sort = TRUE)
+
+all_diseases_male <- experts |>
+  filter(gender == 'male', present == 'no') |>
+  pivot_longer(
+    cols = c(top_d, second_d, third_d, fourth_d, fifith_d),
+    values_to = 'top_diseases'
+  )
+
+
+top_5_male <- all_diseases_male |>
+  count(top_diseases, sort = TRUE)
+
+# Now combining the mental illnesses that came up vs the non-mental conditions
+
+mental_list_female <- c(
+  "depression", "add", "adhd", "mental_disorder",
+  "schizophrenia", "somatization", "substance_abuse",
+  "histronic", "histronic_personality_disorder",
+  "ptsd", "ocd", "social_phobia",
+  "psychosomatic", "physchosomatic" 
+)
+
+mental_list_male <- c(
+  "ptsd", "body_dysmorphic_disorder", "ocd",
+  "antisocial", "bipolar",
+  "explosive_personality",
+  "sexual_behavior_disorder",
+  "substance_abuse",
+  "tic"
+)
+
+female_summary <- top_5_female |>
+  mutate(type = ifelse(top_diseases %in% mental_list_female,
+                       "Mental Illness",
+                       "Not Mental")) |>
+  group_by(type) |>
+  summarise(total = sum(n))
+
+
+male_summary <- top_5_male |>
+  mutate(type = ifelse(top_diseases %in% mental_list_male,
+                       "Mental Illness",
+                       "Not Mental")) |>
+  group_by(type) |>
+  summarise(total = sum(n))
+
+female_summary$gender <- "Female"
+male_summary$gender <- "Male"
+
+combined_mental <- bind_rows(female_summary, male_summary)
+
+combined_mental_ill <- combined_mental %>%
+  group_by(gender) %>%
+  mutate(percent = total / sum(total) * 100,
+         label = paste0(round(percent, 1), "%"))
+
+ggplot(combined_mental_ill, aes(x = 1, y = total, fill = type)) +
+  geom_col(color = "white") +
+  geom_text(aes(label = label), 
+            position = position_stack(vjust = 0.5), color = 'white') + 
+  coord_polar(theta = "y") +
+  facet_wrap(~ gender, nrow = 1, scales = "free") +
+  labs(title = "Distribution of Mental vs Physical Diagnoses by Gender",
+       fill = "Diagnosis Type") +
+  theme_void() +
+  theme(
+    plot.title = element_text(hjust = 1, vjust = 10),
+    plot.margin = margin(t = 20, r = 10, b = 10, l = 10)
+  )
+```
+
+It is also a common discussion point in the female community about how we often are told that we are "depressed" or "anxious" when we come into the doctor's office with concerning symptoms. To see if there is any representation of this with my data, I took all reported symptoms by the systems for any value that was not correctly reported. So, when the system did not correctly guess the disease, I collected all of the incorrect diagnosis into a data frame and separated the ones that are mental diseases (schizophrenia, bipolar, etc) from physical diseases. I then wanted to see how often a system incorrectly reported a diagnosis, that said diagnosis was a mental illness. As you can see, the systems favored mental illness diagnosis for females over males. Only 23.6% of all incorrect diagnosis for men were mental illnesses, while over 60% of incorrect diagnosis were mental illnesses returned for females.
+
+#### Interpretation
+
+Results are reporting statistical significance and visual disparity between male and female diagnosis. The Wilcoxon Rank-Sum test displayed a statistically significant p-value, allowing us to reject the null hypothesis. There was visual disparity between ranking for correct diagnosis between men and women for all ages and three of the four diseases. It is unclear whether the inconsistency with Lupus is related to the overwhelmingly less amount of men who get the disease compared to women. Further, the data shows a possible secondary discovery, with differences in diagnosis types, favoring mental illness related diagnosis for women far more than reported for men.
+
+#### Limitations
+
+While this study shows the need for further replication, there are present limitations with this current study. I believe it necessary to include more systems, preferably at least 5 more, if available. I would also like to expand disease types, such as adding more autoimmune diseases to see if there is consistency for misdiagnosis for men compared to women as we discovered with Lupus. Age range expansion could be beneficial as well, if timing allows. However, future studies should focus on the expansion of systems and disease types for furthering analysis and perhaps bringing forth updates within our current systems or policy for usage of such in a professional medical setting.
+
+#### References
+
+Sun, Tony Yue. et al. "Large-scale characterization of gender differences in diagnosis prevalence and time to diagnosis" *National Library of Medicine*, doi: 10.1101/2023.10.12.23296976.
