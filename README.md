@@ -28,7 +28,7 @@ Language: R
 Tools: Tidyverse
 
 ### IBM Stock Price Predictions
-[Expert Systems on Medical Diagnosis Accuracy](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Expert Systems and Medical Diagnosis)
+[Expert Systems on Medical Diagnosis Accuracy]([https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Expert Systems and Medical Diagnosis](https://github.com/hannahdpeterson/Data_Portfolio/tree/main/Expert%20Systems%20and%20Medical%20Diagnosis)
 Data obtained via personal collection and installment
 * Data obtained using two expert systems, 64 rows all collected by input and output records done by hand
 * Exploring how accurate diagnosis are given by expert systems that are commonly utilized in a professional environment
