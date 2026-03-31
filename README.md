@@ -32,8 +32,10 @@ Tools: Tidyverse
 Data obtained via personal collection and installment
 * Data obtained using two expert systems, 64 rows all collected by input and output records done by hand
 * Exploring how accurate diagnosis are given by expert systems that are commonly utilized in a professional environment
-* Goal is to test if there are any statistical differences between male and female diagnosis accuracy
+* Goal was to test if there are any statistical differences between male and female diagnosis accuracy
 * Collected data, explored data set, wilcoxon rank-sum test and visualizations, analysis and limitations, proposal for future study
+* Discovered significant statistical difference between male and female diagnosis for the same diseases, with women being far underdiagnosed compared to men
+* Secondary discovery found that women received three times more mental health diagnosis then men did for the same diseases
 Langauge: R
 Tools: tidyverse, online Expert Systems
 
