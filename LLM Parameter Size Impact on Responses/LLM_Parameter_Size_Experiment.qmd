@@ -1,0 +1,105 @@
+---
+title: "Does model parameter size influence gender bias in large language generated wages?"
+author: "Hannah Peterson"
+date: 21 April 2026
+format: pdf
+editor: visual
+---
+
+\newpage
+
+### Motivation
+
+Current Large Language models such as ChatGPT and Google Gemini have taken control of the growing AI market as leaders. Users take advice, research, and summarized content from these LLM's in the same way users previously adapted to using search engine's such as Google in replacement of textbooks or encyclopedia's for information. What many users don't know, however, is that LLM's such as themselves are trained on the same content we have developed and been utilizing in our texts over the years. Essentially, ChatGPT is like a giant textbook with almost all data and text we have created over the last few decades, that can easily index through this information to give us a quick answer to any given question. The reason ChatGPT and Gemini are so advanced is because the data it is trained (and still training) on is much larger and vast then some other LLM's are trained on. The difference between Gemini and a 1-billion parameter LLM is that Gemini would be equivalent to a student whose stored thousands of encyclopedia's in their brain while the billion parameter LLM is equivalent to a student whose only stored a singular textbook worth of information in their brain.
+
+Given these LLM's are trained on data we as human's have developed and put together, it is possible to see traits such as bias or human error be picked up by the models. As mentioned as before, parameter size of the models (the capacity of information they have essentially stored from training) affects how advanced the models are. I wondered if and how parameter size may affect a topic that human's generally have bias towards.
+
+### Data Collection
+
+In order to properly test the way parameter size picks up human bias, we must first select a bias to test. I did not want the experiment to be too forward or distasteful, but I wanted it to be something a model could *choose* to be bias towards. Essentially, I wanted to frame the question I gave the model more like an opinion rather than an ask to be biased.
+
+I thought over data that a model may have picked up on that is not as explicit as other biases may be: the wage gap. Women are under-payed in comparison to men in most countries for the same jobs, something that a model trained on recent data is likely to pick up as an issue or an occurrence, but possibly not recognize that the wage gap is an "bad" thing but rather just a "normal" thing.
+
+Now whether more parameters or less parameters causes that effect can only be studied by collecting information on the wage gap from differing parameter sized models. I intend to feed three models the same two questions: "send me 100 wages you think women may have" and "send me 100 wages you think men may have". I wanted my question to be worded neutral in order to not influence the models answer. I framed the question to allow the model to answer the way it believed most correct. In order to measure influence of bias, I will compare the wages of each male and female values within each model and then between all three models tested.
+
+I downloaded three models for testing from Ollama: gemma3:12b, gemma3:4b, and gemma3:1b. So essentially, 12 billion parameters, 4 billion parameters, and 1 billion parameters are being compared. Following each question, I will collect the wages for the given sex and model and place them into a data frame with two variables: "wages" and "sex". This totals 200 values per model, or 600 across all models.
+
+### Experiment & Methods
+
+We are examining our data with a null hypothesis that there is no statistically significant difference between female and male generated wages across all models. A secondary hypothesis I hold is that the larger the model, the likeliness the wage gap will decrease as the models with more knowledge may be more aware of this gap and try to avoid it.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(dplyr)
+
+gemma1 <- read_csv('gemma31b_data.csv')
+gemma4 <- read_csv('gemma34b_data.csv')
+gemma12 <- read_csv('gemma312b_data.csv')
+```
+
+I first examined the difference between means of male and female wages within each model:
+
+```{r, echo=FALSE}
+print("1 Billion Parameter Model: ")
+tapply(gemma1$wages, gemma1$sex, mean, na.rm = TRUE)
+
+print("4 Billion Parameter Model: ")
+tapply(gemma4$wages, gemma4$sex, mean, na.rm = TRUE)
+
+print("12 Billion Parameter Model: ")
+tapply(gemma12$wages, gemma12$sex, mean, na.rm = TRUE)
+
+```
+
+```{r, echo=FALSE}
+gemmas_all <- bind_rows(gemma1 = gemma1, 
+                        gemma4 = gemma4, 
+                        gemma12 = gemma12,
+                        .id = 'model')
+
+gemmas_all$model <- factor(gemmas_all$model, levels = c("gemma1", "gemma4", "gemma12"))
+
+ggplot(gemmas_all, aes(x = model, y = wages, fill = sex)) +
+  geom_boxplot() +
+  labs(
+    title = "Wages by Model (Female vs Male)",
+    x = "Model Type",
+    y = "Wage")
+```
+
+Wage range seems significantly larger as model type progresses in size, with gemma3:4b displaying he largest range for female wages. gemma3:1b has a mean wage at around the same amount (\~\$65500) while both gemma3:4b and gemma3:12b both gave males a significantly larger average wage. Given the placement of outliers on gemma3:4b female wages, you can see that each given wage was fixed (80000, 90000, 95000) whereas wages in gemma3:1b and gemma3:12b had wages that were not fixed (89434, 93892, 98023).
+
+I want to see if the difference between these means were statistically significant between males and females for each model.
+
+```{r}
+t.test(wages ~ sex, data = gemma1)
+t.test(wages ~ sex, data = gemma4)
+t.test(wages ~ sex, data = gemma12)
+```
+
+The results of our two-sample t-tests showed that there was a statistically significant difference between male wages and female wages given by the models for both model gemma3:4b and gemma3:12b. Our gemma3:1b model had a p-value above the 0.05 alpha level.
+
+\newpage
+
+To further the experiment overall, I want to utilize an ANOVA test with an interaction term between sex and model size, to truly see if there is a change in the wage gap dependent upon model size.
+
+```{r, echo=FALSE}
+model <- aov(wages ~ sex * model, data = gemmas_all)
+summary(model)
+```
+
+The results of our ANOVA model show that there is statistical significance (p-value \< 0.05) that model size affects the wages it is generating.
+
+### Results & Analysis
+
+The statistical tests ran (ANOVA & t-test's) displayed that model size affects the wage types that the models are generating. Our box-plots displayed that gemma3:4b and gemma3:12b created a larger wage gap between male's and females that did gemma3:1b. The wage gap created by by gemma3:4b was about 35.4%, while the wage gap created by gemma3:12b was 26.8%. This is much larger than the gap currently faced globally, which is about 17%. The gemma3:1b only had a gap of 0.7%, which was found statistically insignificant for a difference in wages through our t-test.
+
+The experiment results conclude that we reject our null hypothesis and instead turn to the alternative which concludes that there was a statistically significant difference between male and female generated wages across all models.
+
+My secondary hypothesis was false, however, as the larger models actually had the largest gaps between wages for males and females. This may be a result of seeing and training on more data that includes this wage gap, and even if they are "aware" the gap is "wrong", the formulation of the phrase "send me 100 wages you think women may have." could be them proposing that the wage they believe women would receive based on the data it was trained on, would be less than a males.
+
+The results of this experiment do not sound alarms immediately, as the question proposed to these models did not ask them to give wages to real persons or if they believed their proposed wages were morally correct or wrong. If this experiment were expanded, that may be an important aspect to include for drawing conclusions about whether this bias is dangerous or just awareness of the data they were trained on. Interestingly, we discovered that model size does impact the ability for a model to comprehend pay gaps. It is important to pay attention to model size when utilizing AI for specific topics that may be influenced heavily by real-world bias, such as wage distribution. I would propose users of open-sources such as Ollama assure that the tasks and projects they will utilize these models for be careful and strategic when selecting what model size they use. Larger models may reflect more bias then the smaller models given the parameter amount it is trained on.
+
+### Confounders & Potential Gaps
+
+While the data had 600 values for study, I do believe a wider range of model parameters could increase the durability of this project. I also believe multiple runs of wage generation could either further this project conclusion or challenge it. There are gaps in this study to be aware of such as the specific phrasing fed to the models being neutral, which does not allow us to draw conclusions on whether the bias is the models "belief" or that they felt they were being asked what wages they believe a populous would receive. In future studies, additional models with different parameters sizes, neutral phrasing as a control and biased phrasing an explanatory variable, and multiple runs would help build this study out to a much stronger argument and stronger conclusions.
